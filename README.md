@@ -1,1 +1,1 @@
-# upyun-django-storage
+# upyun-django

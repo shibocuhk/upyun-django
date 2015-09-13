@@ -1,1 +1,1 @@
-# upyun-django
+# upyun_django

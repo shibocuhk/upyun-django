@@ -119,8 +119,7 @@ class UpYunStorage(Storage):
 
     def exists(self, name):
         try:
-            self.api.getinfo(self._save_key(self._clean_name(name)))
-            return True
+            return self._get_or_update_entry(name)
         except UpYunServiceException as ex:
             if ex.status == 404:
                 return False
@@ -135,12 +134,13 @@ class UpYunStorage(Storage):
         dirs = set()
         files = set()
         for entry in res:
+            entry['name'] = os.path.join(path, entry['name'])
             if entry['type'] == 'N':
                 files.add(entry['name'])
             else:
                 dirs.add(entry['name'])
 
-            self.entries.update(dict(self._entry_to_tuple(entry)))
+            self.entries.update(dict([self._entry_to_tuple(entry)]))
         return list(dirs), list(files)
 
     def size(self, name):
@@ -150,7 +150,7 @@ class UpYunStorage(Storage):
         return parse_ts(self._get_or_update_entry(name)['time'])
 
     def url(self, name):
-        return 'http://%s.%s/%s' % (self._bucket, self._endpoint, self._save_key(name))
+        return 'http://%s.%s%s' % (self._bucket, self._endpoint, self._save_key(name))
 
     def save_key(self, name):
         return self._save_key(name)
@@ -166,13 +166,11 @@ class UpYunStorage(Storage):
 
     def _get_or_create_folder(self):
         try:
-            res = dict(
-                self._entry_to_tuple(entry) for entry in
-                self.api.getlist(self._root))
+            res = dict(self._entry_to_tuple(entry) for entry in self.api.getlist(self._root))
         except UpYunServiceException as ex:
             if ex.status == 404:
                 self.api.mkdir(self._root)
-                res = dict((entry['name'], entry) for entry in self.api.getlist(self._root))
+                res = dict(self._entry_to_tuple(entry) for entry in self.api.getlist(self._root))
             else:
                 raise
         return res
@@ -182,9 +180,28 @@ class UpYunStorage(Storage):
         if save_key in self.entries:
             return self.entries[save_key]
         else:
-            entry = self.api.getinfo(save_key)
-            self.entries.update(dict(self._entry_to_tuple(entry)))
+            entry = self._file_info_to_entry(name, self.api.getinfo(save_key))
+            self.entries.update(dict([self._entry_to_tuple(entry)]))
             return entry
 
     def _entry_to_tuple(self, entry):
         return self._save_key(entry['name'] if entry['type'] == 'N' else entry['name'] + '/'), entry
+
+    def _file_info_to_entry(self, name, file_info):
+        return {
+            'type': 'N',
+            'size': file_info['file-size'],
+            'time': file_info['file-date'],
+            'name': name
+        }
+
+
+class UpYunStaticStorage(UpYunStorage):
+    def __init__(self):
+        root = setting('UPYUN_STATIC_ROOT', '/static')
+        super(UpYunStaticStorage, self).__init__(root=root)
+        dirs = self.listdir(root)[0]
+        while len(dirs) != 0:
+            path = dirs.pop()
+            print(path)
+            dirs.extend(self.listdir(path)[0])

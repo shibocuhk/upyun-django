@@ -1,5 +1,15 @@
 import mimetypes
 import os
+from tempfile import TemporaryFile
+
+from django.utils.encoding import force_bytes
+
+from upyun_django.utils import parse_ts
+
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
 
 from django.core.files.base import File
 
@@ -12,7 +22,44 @@ from upyun import UpYunServiceException
 
 
 class UpYunStorageFile(File):
-    pass
+    def __init__(self, name, storage, mode):
+        self._name = name
+        self._storage = storage
+        self._mode = mode
+        self._file = None
+        self._is_dirty = False
+
+    @property
+    def size(self):
+        return self._storage.size(self._name)
+
+    # inspired by https://github.com/jschneier/django-storages/blob/master/storages/backends/s3boto.py
+    def read(self, *args, **kwargs):
+        if 'r' not in self._mode:
+            raise AttributeError("File was not opened in read mode.")
+        return super(UpYunStorageFile, self).read(*args, **kwargs)
+
+    def write(self, content, *args, **kwargs):
+        if 'w' not in self._mode:
+            raise AttributeError("File was not opened in write mode")
+        self._is_dirty = True
+        return super(UpYunStorageFile, self).write(force_bytes(content), *args, **kwargs)
+
+    def close(self):
+        if self._is_dirty:
+            self._storage.save(self._name, self.file)
+
+    def _get_file(self):
+        if self._file is None:
+            self._file = TemporaryFile(suffix='.UpYunStorageFile')
+            self._storage.api.get(self._storage.save_key(self._name), self._file)
+            self._file.seek(0)
+        return self._file
+
+    def _set_file(self, value):
+        self._file = value
+
+    file = property(_get_file, _set_file)
 
 
 class UpYunStorage(Storage):
@@ -44,6 +91,10 @@ class UpYunStorage(Storage):
         if self._entries is None:
             self._entries = self._get_or_create_folder()
         return self._entries
+
+    def _open(self, name, mode):
+        upyun_file = UpYunStorageFile(name, 'rb')
+        return upyun_file
 
     def _save(self, name, content):
         clean_name = self._clean_name(name)
@@ -82,7 +133,21 @@ class UpYunStorage(Storage):
                 files.add(entry['name'])
             else:
                 dirs.add(entry['name'])
+
+            self.entries.update(dict(self._entry_to_tuple(entry)))
         return list(dirs), list(files)
+
+    def size(self, name):
+        return self._get_or_update_entry(name)['size']
+
+    def modified_time(self, name):
+        return parse_ts(self._get_or_update_entry(name)['time'])
+
+    def url(self, name):
+        return 'http://%s.%s/%s' % (self._bucket, self._endpoint, self._save_key(name))
+
+    def save_key(self, name):
+        return self._save_key(name)
 
     def _clean_name(self, name):
         return os.path.normpath(name).replace("\\", "/")
@@ -92,7 +157,9 @@ class UpYunStorage(Storage):
 
     def _get_or_create_folder(self):
         try:
-            res = dict((entry['name'], entry) for entry in self.api.getlist(self._root))
+            res = dict(
+                self._entry_to_tuple(entry) for entry in
+                self.api.getlist(self._root))
         except UpYunServiceException as ex:
             if ex.status == 404:
                 self.api.mkdir(self._root)
@@ -100,3 +167,15 @@ class UpYunStorage(Storage):
             else:
                 raise
         return res
+
+    def _get_or_update_entry(self, name):
+        save_key = self._save_key(self._clean_name(name))
+        if save_key in self.entries:
+            return self.entries[save_key]
+        else:
+            entry = self.api.getinfo(save_key)
+            self.entries.update(dict(self._entry_to_tuple(entry)))
+            return entry
+
+    def _entry_to_tuple(self, entry):
+        return self._save_key(entry['name'] if entry['type'] == 'N' else entry['name'] + '/'), entry

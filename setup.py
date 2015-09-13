@@ -1,9 +1,9 @@
 from distutils.core import setup
 
 setup(
-    name='upyun-django',
+    name='upyun_django',
     version='0.0.1',
-    packages=['upyun-django'],
+    packages=['upyun_django'],
     url='http://bruceshi.me',
     license='MIT',
     author='bruceshi',

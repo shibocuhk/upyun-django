@@ -1,10 +1,11 @@
+__author__ = 'bruceshi'
 import mimetypes
 import os
 from tempfile import TemporaryFile
 
 from django.utils.encoding import force_bytes
 
-from upyun_django.utils import parse_ts
+from upyun_django.utils import parse_ts, setting
 
 try:
     from cStringIO import StringIO
@@ -12,8 +13,6 @@ except ImportError:
     from StringIO import StringIO
 
 from django.core.files.base import File
-
-__author__ = 'bruceshi'
 from django.conf import settings
 from django.core.files.storage import Storage
 from upyun import UpYun
@@ -22,7 +21,7 @@ from upyun import UpYunServiceException
 
 
 class UpYunStorageFile(File):
-    def __init__(self, name, storage, mode):
+    def __init__(self, name, storage, mode='rb'):
         self._name = name
         self._storage = storage
         self._mode = mode
@@ -47,7 +46,10 @@ class UpYunStorageFile(File):
 
     def close(self):
         if self._is_dirty:
+            self.file.seek(0)
+            self._storage.delete(self._name)
             self._storage.save(self._name, self.file)
+        return super(UpYunStorageFile, self).close()
 
     def _get_file(self):
         if self._file is None:
@@ -63,10 +65,13 @@ class UpYunStorageFile(File):
 
 
 class UpYunStorage(Storage):
-    def __init__(self, username, password, bucket, root='/', timeout=60, endpoint=ED_AUTO, secret=None):
+    def __init__(self, username=None, password=None, bucket=None, root='/', timeout=60, endpoint=ED_AUTO, secret=None):
         self._username = username or settings.UPYUN_USERNAME
         self._password = password or settings.UPYUN_PASSWORD
-        self._bucket = bucket or self.UPYUN_BUCKET
+        self._bucket = bucket or settings.UPYUN_BUCKET
+        self._hotlink_token = setting('UPYUN_HOTLINK_TOKEN', None)
+        self._hotlink_token_expire = setting('UPYUN_HOTLINK_TOKEN_EXPIRE', 600)
+        self._thumbnail_seperate = setting("UPYUN_THUMBNAIL_SEPERATE", '!')
         self._endpoint = endpoint
         self._timeout = timeout
         self._root = root
@@ -82,7 +87,8 @@ class UpYunStorage(Storage):
                 self._username,
                 self._password,
                 self._timeout,
-                self._endpoint
+                self._endpoint,
+                human=False,
             )
         return self._api
 
@@ -93,12 +99,12 @@ class UpYunStorage(Storage):
         return self._entries
 
     def _open(self, name, mode):
-        upyun_file = UpYunStorageFile(name, 'rb')
+        upyun_file = UpYunStorageFile(name, self, mode)
         return upyun_file
 
     def _save(self, name, content):
         clean_name = self._clean_name(name)
-        content_type = getattr(content, 'content_type', mimetypes.guess_type(name)[0] or 'image/jpeg')
+        content_type = getattr(content, 'content_type', mimetypes.guess_type(name)[0] or 'text/plain')
         headers = {
             'Mkdir': True,
             'Content-Type': content_type,
@@ -148,6 +154,9 @@ class UpYunStorage(Storage):
 
     def save_key(self, name):
         return self._save_key(name)
+
+    def set_secret(self, secret):
+        self._secret = secret
 
     def _clean_name(self, name):
         return os.path.normpath(name).replace("\\", "/")

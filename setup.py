@@ -12,6 +12,8 @@ setup(
     install_requires=[
         'upyun',
     ],
+    tests_require=['Django'],
+    test_suite='tests.main',
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',

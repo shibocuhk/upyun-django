@@ -1,3 +1,5 @@
+import time
+
 __author__ = 'bruceshi'
 import mimetypes
 import os
@@ -5,7 +7,7 @@ from tempfile import TemporaryFile
 
 from django.utils.encoding import force_bytes
 
-from upyun_django.utils import parse_ts, setting
+from upyun_django.utils import parse_ts, setting, hotlink_signature
 
 try:
     from cStringIO import StringIO
@@ -65,14 +67,16 @@ class UpYunStorageFile(File):
 
 
 class UpYunStorage(Storage):
-    def __init__(self, username=None, password=None, bucket=None, root='/', timeout=60, endpoint=ED_AUTO, secret=None):
+    def __init__(self, username=None, password=None, bucket=None, root='/', timeout=60, endpoint=ED_AUTO, secret=None,
+                 token=None, domain=None):
         self._username = username or settings.UPYUN_USERNAME
         self._password = password or settings.UPYUN_PASSWORD
         self._bucket = bucket or settings.UPYUN_BUCKET
-        self._hotlink_token = setting('UPYUN_HOTLINK_TOKEN', None)
+        self._hotlink_token = token or setting('UPYUN_HOTLINK_TOKEN', None)
         self._hotlink_token_expire = setting('UPYUN_HOTLINK_TOKEN_EXPIRE', 600)
         self._thumbnail_seperate = setting("UPYUN_THUMBNAIL_SEPERATE", '!')
         self._endpoint = endpoint
+        self._domain = domain or 'b0.upaiyun.com'
         self._timeout = timeout
         self._root = root
         self._api = None
@@ -150,7 +154,11 @@ class UpYunStorage(Storage):
         return parse_ts(self._get_or_update_entry(name)['time'])
 
     def url(self, name):
-        return 'http://%s.%s%s' % (self._bucket, self._endpoint, self._save_key(name))
+        _upt = hotlink_signature(self._save_key(name), self._hotlink_token,
+                                 int(time.time()) + self._hotlink_token_expire) if self._hotlink_token else ''
+
+        _secret = (self._thumbnail_seperate + self._secret) if self._secret else ''
+        return 'http://%s.%s%s%s%s' % (self._bucket, self._domain, self._save_key(name), _secret, '?_upt=' + _upt)
 
     def save_key(self, name):
         return self._save_key(name)

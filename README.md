@@ -13,7 +13,7 @@ This file class will create a temp file with `TemporaryFile()`, `write()` will o
 ### UpYunStaticStorage
 By setting `STATICFILES_STORAGE=upyun_django.UpYunStaticStorage`, you can collect you static file to upyun cdn.
 `collectstatic` use modified_time to decide whether copy the file or not. To reduce the number of request, this class will preload
-all the entry in the cloud and save to the local hash.
+all the entry on the cloud and save to the local cache.
 
 
 ## Installation

@@ -1,4 +1,5 @@
 from StringIO import StringIO
+import os
 
 from django.test import TestCase
 
@@ -9,15 +10,16 @@ __author__ = 'bruceshi'
 
 class StorageTest(TestCase):
     def setUp(self):
-        self.storage = UpYunStorage()
+        pass
 
     def test_curd(self):
+        self.storage = UpYunStorage()
         name = 'test'
         content_str = 'hello world'
         content = StringIO(content_str)
         # assert create
         name = self.storage.save(name, content)
-        assert self.storage.url(name).endswith(name)
+        assert name in self.storage.url(name)
 
         # assert open
         remote_file = self.storage.open(name, 'rb')
@@ -35,3 +37,15 @@ class StorageTest(TestCase):
         # assert delete
         self.storage.delete(name)
         assert self.storage.exists(name) == False
+
+    def test_token(self):
+        self.storage = UpYunStorage(token=os.getenv('UPYUN_HOTLINK_TOKEN'))
+        name = 'test'
+        content_str = 'hello world'
+        content = StringIO(content_str)
+        name = self.storage.save(name, content)
+
+        url = self.storage.url(name)
+
+        import requests
+        res = requests.get(url)

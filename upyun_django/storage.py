@@ -1,10 +1,14 @@
-import time
-
-__author__ = 'bruceshi'
 import mimetypes
 import os
+import time
 from tempfile import TemporaryFile
 
+from django.core.files.base import File
+from django.conf import settings
+from django.core.files.storage import Storage
+from upyun import UpYun
+from upyun import ED_AUTO
+from upyun import UpYunServiceException
 from django.utils.encoding import force_bytes
 
 from upyun_django.utils import parse_ts, setting, hotlink_signature
@@ -14,56 +18,58 @@ try:
 except ImportError:
     from StringIO import StringIO
 
-from django.core.files.base import File
-from django.conf import settings
-from django.core.files.storage import Storage
-from upyun import UpYun
-from upyun import ED_AUTO
-from upyun import UpYunServiceException
-
 
 class UpYunStorageFile(File):
     def __init__(self, name, storage, mode='rb'):
-        self._name = name
-        self._storage = storage
-        self._mode = mode
         self._file = None
-        self._is_dirty = False
+        self._storage = storage
+        self.name = name
+        self.mode = mode
+        self.is_dirty = False
 
     @property
     def size(self):
-        return self._storage.size(self._name)
+        return self._storage.size(self.name)
 
     # inspired by https://github.com/jschneier/django-storages/blob/master/storages/backends/s3boto.py
     def read(self, *args, **kwargs):
-        if 'r' not in self._mode:
+        if 'r' not in self.mode:
             raise AttributeError("File was not opened in read mode.")
         return super(UpYunStorageFile, self).read(*args, **kwargs)
 
     def write(self, content, *args, **kwargs):
-        if 'w' not in self._mode:
+        if 'w' not in self.mode:
             raise AttributeError("File was not opened in write mode")
-        self._is_dirty = True
+        self.is_dirty = True
         return super(UpYunStorageFile, self).write(force_bytes(content), *args, **kwargs)
 
     def close(self):
-        if self._is_dirty:
-            self.file.seek(0)
-            self._storage.delete(self._name)
-            self._storage.save(self._name, self.file)
+        if self.is_dirty:
+            self._file.seek(0)
+            self._storage.delete(self.name)
+            self._storage.save(self.name, self._file)
         return super(UpYunStorageFile, self).close()
 
     def _get_file(self):
         if self._file is None:
             self._file = TemporaryFile(suffix='.UpYunStorageFile')
-            self._storage.api.get(self._storage.save_key(self._name), self._file)
+            self._storage.api.get(self._storage.save_key(self.name), self._file)
             self._file.seek(0)
         return self._file
 
     def _set_file(self, value):
         self._file = value
 
-    file = property(_get_file, _set_file)
+    def _del_file(self):
+        self._storage.delete(self.name)
+
+    def _get_path(self):
+        return self._storage.path(self.name)
+
+    def _get_url(self):
+        return self._storage.url(self.name)
+
+    file = property(_get_file, _set_file, _del_file)
 
 
 class UpYunStorage(Storage):
@@ -92,7 +98,7 @@ class UpYunStorage(Storage):
                 self._password,
                 self._timeout,
                 self._endpoint,
-                human=False,
+                human=True,
             )
         return self._api
 
@@ -113,7 +119,7 @@ class UpYunStorage(Storage):
             'Mkdir': True,
             'Content-Type': content_type,
         }
-
+        content.seek(0)
         self.api.put(self._save_key(clean_name), content, headers=headers, secret=self._secret)
 
         return clean_name
@@ -154,11 +160,13 @@ class UpYunStorage(Storage):
         return parse_ts(self._get_or_update_entry(name)['time'])
 
     def url(self, name):
-        _upt = hotlink_signature(self._save_key(name), self._hotlink_token,
-                                 int(time.time()) + self._hotlink_token_expire) if self._hotlink_token else ''
-
+        _upt = self._upt_token(name)
         _secret = (self._thumbnail_seperate + self._secret) if self._secret else ''
         return 'http://%s.%s%s%s%s' % (self._bucket, self._domain, self._save_key(name), _secret, '?_upt=' + _upt)
+
+    def thumbnail_url(self, name, version):
+        _upt = self._upt_token(name)
+        return 'http://%s.%s%s!%s%s' % (self._bucket, self._domain, self._save_key(name), version, '?_upt=' + _upt)
 
     def save_key(self, name):
         return self._save_key(name)
@@ -166,8 +174,17 @@ class UpYunStorage(Storage):
     def set_secret(self, secret):
         self._secret = secret
 
+    def path(self, name):
+        return self.save_key(name)
+
     def _clean_name(self, name):
         return os.path.normpath(name).replace("\\", "/")
+
+    def _upt_token(self, name):
+        _upt = hotlink_signature(self._save_key(name), self._hotlink_token,
+                                 int(time.time()) + self._hotlink_token_expire) if self._hotlink_token else ''
+
+        return _upt
 
     def _save_key(self, name):
         return os.path.join(self._root, name)

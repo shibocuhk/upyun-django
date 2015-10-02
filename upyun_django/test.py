@@ -13,8 +13,9 @@ class StorageTest(TestCase):
         pass
 
     def test_curd(self):
-        self.storage = UpYunStorage()
-        name = 'test'
+        self.storage = UpYunStorage(root='/media/resources')
+        name = 'test_create'
+
         content_str = 'hello world'
         content = StringIO(content_str)
         # assert create
@@ -34,18 +35,16 @@ class StorageTest(TestCase):
         remote_file.close()
         assert self.storage.open(name, 'rb').read() == another_content_str
 
-        # assert delete
-        self.storage.delete(name)
-        assert self.storage.exists(name) == False
+        # # assert delete
+        # self.storage.delete(name)
+        # assert self.storage.exists(name) == False
 
     def test_token(self):
         self.storage = UpYunStorage(token=os.getenv('UPYUN_HOTLINK_TOKEN'))
         name = 'test'
         content_str = 'hello world'
-        content = StringIO(content_str)
+        content = open('company_logo.png', 'r')
         name = self.storage.save(name, content)
-
         url = self.storage.url(name)
-
         import requests
         res = requests.get(url)

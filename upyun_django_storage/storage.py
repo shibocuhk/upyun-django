@@ -9,6 +9,7 @@ from django.conf import settings
 from django.core.files.storage import Storage
 from django.utils.deconstruct import deconstructible
 from django.utils.encoding import force_bytes
+
 from upyun import UpYun
 
 from upyun import ED_AUTO
@@ -178,7 +179,7 @@ class UpYunStorage(Storage):
     def thumbnail_url(self, name, version):
         if self._hotlink_token:
             raise Exception('hotlinke token does not support thumbnail')
-        return 'http://%s.%s/%s!%s%s' % (self._bucket, self._domain, self._save_key(name), version, '?_upt=' + _upt)
+        return 'http://%s.%s/%s!%s%s' % (self._bucket, self._domain, self._save_key(name), version)
 
     def save_key(self, name):
         return self._save_key(name)

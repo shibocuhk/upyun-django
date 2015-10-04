@@ -179,7 +179,7 @@ class UpYunStorage(Storage):
     def thumbnail_url(self, name, version):
         if self._hotlink_token:
             raise Exception('hotlinke token does not support thumbnail')
-        return 'http://%s.%s/%s!%s%s' % (self._bucket, self._domain, self._save_key(name), version)
+        return 'http://%s.%s/%s!%s' % (self._bucket, self._domain, self._save_key(name), version)
 
     def save_key(self, name):
         return self._save_key(name)

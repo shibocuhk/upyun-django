@@ -1,17 +1,22 @@
 import mimetypes
 import os
-import time
 from tempfile import TemporaryFile
+from datetime import datetime
+import time
 
 from django.core.files.base import File
 from django.conf import settings
 from django.core.files.storage import Storage
-from upyun import UpYun
-from upyun import ED_AUTO
-from upyun import UpYunServiceException
+from django.utils.deconstruct import deconstructible
 from django.utils.encoding import force_bytes
+from upyun import UpYun
 
-from upyun_django.utils import parse_ts, setting, hotlink_signature
+from upyun import ED_AUTO
+
+from upyun import UpYunServiceException
+
+from upyun_django_storage.models import UpYunToken
+from upyun_django_storage.utils import parse_ts, setting, hotlink_signature
 
 try:
     from cStringIO import StringIO
@@ -72,6 +77,7 @@ class UpYunStorageFile(File):
     file = property(_get_file, _set_file, _del_file)
 
 
+@deconstructible
 class UpYunStorage(Storage):
     def __init__(self, username=None, password=None, bucket=None, root='/', timeout=60, endpoint=ED_AUTO, secret=None,
                  token=None, domain=None):
@@ -160,12 +166,18 @@ class UpYunStorage(Storage):
         return parse_ts(self._get_or_update_entry(name)['time'])
 
     def url(self, name):
-        _upt = self._upt_token(name)
+        if self._hotlink_token:
+            _upt = self._upt_token(name)
+            _upt_str = '?_upt=' + _upt
+        else:
+            _upt_str = ''
+
         _secret = (self._thumbnail_seperate + self._secret) if self._secret else ''
-        return 'http://%s.%s/%s%s%s' % (self._bucket, self._domain, self._save_key(name), _secret, '?_upt=' + _upt)
+        return 'http://%s.%s/%s%s%s' % (self._bucket, self._domain, self._save_key(name), _secret, _upt_str)
 
     def thumbnail_url(self, name, version):
-        _upt = self._upt_token(name)
+        if self._hotlink_token:
+            raise Exception('hotlinke token does not support thumbnail')
         return 'http://%s.%s/%s!%s%s' % (self._bucket, self._domain, self._save_key(name), version, '?_upt=' + _upt)
 
     def save_key(self, name):
@@ -181,10 +193,24 @@ class UpYunStorage(Storage):
         return os.path.normpath(name).replace("\\", "/")
 
     def _upt_token(self, name):
-        _upt = hotlink_signature(self._save_key(name), self._hotlink_token,
-                                 int(time.time()) + self._hotlink_token_expire) if self._hotlink_token else ''
+        query = UpYunToken.objects.filter(key=self._save_key(name))
+        if query.exists():
+            upyun_token = query.get()
+            if (datetime.now() - upyun_token.timestamp.replace(tzinfo=None)).total_seconds() >= upyun_token.expire:
+                upyun_token = self._create_token(self._save_key(name))
+        else:
+            upyun_token = self._create_token(self._save_key(name))
+        return upyun_token.token
 
-        return _upt
+    def _create_token(self, key):
+        current_time = time.time()
+        _upt = hotlink_signature(key, self._hotlink_token,
+                                 int(current_time) + self._hotlink_token_expire) if self._hotlink_token else ''
+        upyun_token, created = UpYunToken.objects.get_or_create(key=key)
+        upyun_token.token = _upt
+        upyun_token.expire = self._hotlink_token_expire
+        upyun_token.save()
+        return upyun_token
 
     def _save_key(self, name):
         return os.path.join(self._root, name)

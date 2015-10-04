@@ -1,8 +1,11 @@
+from ez_setup import use_setuptools
+
+use_setuptools()
 from setuptools import setup
 
 setup(
     name='upyun_django',
-    version='0.0.1',
+    version='0.0.2',
     packages=['upyun_django'],
     url='http://bruceshi.me',
     license='MIT',

@@ -162,11 +162,11 @@ class UpYunStorage(Storage):
     def url(self, name):
         _upt = self._upt_token(name)
         _secret = (self._thumbnail_seperate + self._secret) if self._secret else ''
-        return 'http://%s.%s%s%s%s' % (self._bucket, self._domain, self._save_key(name), _secret, '?_upt=' + _upt)
+        return 'http://%s.%s/%s%s%s' % (self._bucket, self._domain, self._save_key(name), _secret, '?_upt=' + _upt)
 
     def thumbnail_url(self, name, version):
         _upt = self._upt_token(name)
-        return 'http://%s.%s%s!%s%s' % (self._bucket, self._domain, self._save_key(name), version, '?_upt=' + _upt)
+        return 'http://%s.%s/%s!%s%s' % (self._bucket, self._domain, self._save_key(name), version, '?_upt=' + _upt)
 
     def save_key(self, name):
         return self._save_key(name)

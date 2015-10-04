@@ -10,6 +10,9 @@ class UpYunFieldFile(FieldFile):
     def __init__(self, instance, field, name):
         super(UpYunFieldFile, self).__init__(instance, field, name)
 
+    def thumbnail(self, version):
+        return self.storage.thumbnail_url(self.name, version)
+
 
 class UpYunFileDescriptor(FileDescriptor):
     pass
@@ -24,9 +27,6 @@ class UpYunFileField(FileField):
     def __init__(self, verbose_name=None, name=None, upload_to='', **kwargs):
         storage = UpYunStorage(root=settings.MEDIA_ROOT)
         super(UpYunFileField, self).__init__(verbose_name, name, upload_to, storage, **kwargs)
-
-    def thumbnail(self):
-        return self.storage
 
     def get_internal_type(self):
         return 'UpYunFileField'

@@ -4,7 +4,7 @@ use_setuptools()
 from setuptools import setup
 
 setup(
-    name='upyun_django',
+    name='upyun-django',
     version='0.0.2',
     packages=['upyun_django'],
     url='http://bruceshi.me',

@@ -21,7 +21,7 @@ def main():
             'django.contrib.auth',
             'django.contrib.sessions',
             'django.contrib.contenttypes',
-            'upyun_django',
+            'upyun',
         ),
         DATABASES={
             'default': {
@@ -41,7 +41,7 @@ def main():
     from django.test.runner import DiscoverRunner
     test_runner = DiscoverRunner(verbosity=1)
 
-    failures = test_runner.run_tests(['upyun_django'])
+    failures = test_runner.run_tests(['upyun'])
     sys.exit(failures)
 
 

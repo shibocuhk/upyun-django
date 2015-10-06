@@ -3,7 +3,7 @@ from django.db.models import FileField
 from django.conf import settings
 from django.utils.translation import ugettext_lazy as _
 
-from upyun_django_storage.storage import UpYunStorage
+from upyun_django.storage.storage import UpYunStorage
 
 
 class UpYunFieldFile(FieldFile):

@@ -9,15 +9,12 @@ from django.conf import settings
 from django.core.files.storage import Storage
 from django.utils.deconstruct import deconstructible
 from django.utils.encoding import force_bytes
-
 from upyun import UpYun
-
 from upyun import ED_AUTO
-
 from upyun import UpYunServiceException
 
-from upyun_django_storage.models import UpYunToken
-from upyun_django_storage.utils import parse_ts, setting, hotlink_signature
+from upyun_django.storage.models import UpYunToken
+from upyun_django.storage.utils import parse_ts, setting, hotlink_signature
 
 try:
     from cStringIO import StringIO

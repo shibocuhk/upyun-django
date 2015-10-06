@@ -3,7 +3,7 @@ import os
 
 from django.test import TestCase
 
-from upyun_django_storage.storage import UpYunStorage
+from upyun_django.storage.storage import UpYunStorage
 
 __author__ = 'bruceshi'
 

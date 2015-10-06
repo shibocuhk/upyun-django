@@ -13,5 +13,5 @@ DATABASES = {
     }
 }
 INSTALLED_APPS = {
-    'upyun_django_storage'
+    'storage'
 }

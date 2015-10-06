@@ -4,6 +4,6 @@ import os
 
 from django.core.wsgi import get_wsgi_application
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "upyun_django.settings")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "upyun.settings")
 
 application = get_wsgi_application()

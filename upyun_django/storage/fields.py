@@ -26,7 +26,7 @@ class UpYunFileField(FileField):
     description = _('UpYun File')
 
     def __init__(self, verbose_name=None, name=None, upload_to='', storage=None, **kwargs):
-        storage = UpYunStorage(root=(settßßßing('UPYUN_MEDIA_ROOT', settings.MEDIA_ROOT)))
+        storage = UpYunStorage(root=(setting('UPYUN_MEDIA_ROOT', settings.MEDIA_ROOT)))
         super(UpYunFileField, self).__init__(verbose_name, name, upload_to, storage, **kwargs)
 
     def get_internal_type(self):

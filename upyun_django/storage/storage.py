@@ -94,7 +94,7 @@ class UpYunStorage(Storage):
         self._api = None
         self._secret = secret
         self._entries = None
-        self._protocol = setting('UPYUN_BUCKET', 'http')
+        self._protocol = setting('UPYUN_PROTOCOL', 'http')
 
     @property
     def api(self):

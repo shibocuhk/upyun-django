@@ -4,6 +4,7 @@ from django.conf import settings
 from django.utils.translation import ugettext_lazy as _
 
 from upyun_django.storage.storage import UpYunStorage
+from upyun_django.storage.utils import setting
 
 
 class UpYunFieldFile(FieldFile):
@@ -25,7 +26,7 @@ class UpYunFileField(FileField):
     description = _('UpYun File')
 
     def __init__(self, verbose_name=None, name=None, upload_to='', storage=None, **kwargs):
-        storage = UpYunStorage(root=settings.MEDIA_ROOT)
+        storage = UpYunStorage(root=(settßßßing('UPYUN_MEDIA_ROOT', settings.MEDIA_ROOT)))
         super(UpYunFileField, self).__init__(verbose_name, name, upload_to, storage, **kwargs)
 
     def get_internal_type(self):

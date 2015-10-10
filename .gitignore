@@ -1,5 +1,7 @@
 *.py[oc]
 *.egg-info
+*.egg
+*.tar.gz
 *.bak
 .idea/*
 build

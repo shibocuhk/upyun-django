@@ -11,6 +11,7 @@ from django.utils.deconstruct import deconstructible
 from django.utils.encoding import force_bytes
 from upyun import UpYun
 from upyun import ED_AUTO
+
 from upyun import UpYunServiceException
 
 from upyun_django.storage.models import UpYunToken
@@ -92,6 +93,7 @@ class UpYunStorage(Storage):
         self._api = None
         self._secret = secret
         self._entries = None
+        self._protocol = 'http' or settings.UPYUN_PROTOCOL
 
     @property
     def api(self):
@@ -171,12 +173,13 @@ class UpYunStorage(Storage):
             _upt_str = ''
 
         _secret = (self._thumbnail_seperate + self._secret) if self._secret else ''
-        return 'http://%s.%s/%s%s%s' % (self._bucket, self._domain, self._save_key(name), _secret, _upt_str)
+        return '%s://%s.%s/%s%s%s' % (
+        self._protocol, self._bucket, self._domain, self._save_key(name), _secret, _upt_str)
 
     def thumbnail_url(self, name, version):
         if self._hotlink_token:
             raise Exception('hotlinke token does not support thumbnail')
-        return 'http://%s.%s/%s!%s' % (self._bucket, self._domain, self._save_key(name), version)
+        return '%s://%s.%s/%s!%s' % (self._protocol, self._bucket, self._domain, self._save_key(name), version)
 
     def save_key(self, name):
         return self._save_key(name)

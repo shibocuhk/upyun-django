@@ -174,7 +174,7 @@ class UpYunStorage(Storage):
             _upt_str = ''
 
         _secret = (self._thumbnail_seperate + self._secret) if self._secret else ''
-        return '%s://%s.%s/%s%s%s' % (
+        return '%s://%s.%s%s%s%s' % (
             self._protocol, self._bucket, self._domain, self._save_key(name), _secret, _upt_str)
 
     def thumbnail_url(self, name, version):

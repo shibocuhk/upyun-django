@@ -1,20 +1,18 @@
 import mimetypes
 import os
-from tempfile import TemporaryFile
-from datetime import datetime
 import time
+from datetime import datetime
+from tempfile import TemporaryFile
 
-from django.core.files.base import File
 from django.conf import settings
+from django.core.files.base import File
 from django.core.files.storage import Storage
 from django.utils.deconstruct import deconstructible
 from django.utils.encoding import force_bytes
-from upyun import UpYun
 
 from upyun import ED_AUTO
-
+from upyun import UpYun
 from upyun import UpYunServiceException
-
 from upyun_django.storage.models import UpYunToken
 from upyun_django.storage.utils import parse_ts, setting, hotlink_signature
 
@@ -103,9 +101,8 @@ class UpYunStorage(Storage):
                 self._bucket,
                 self._username,
                 self._password,
-                self._timeout,
-                self._endpoint,
-                human=True,
+                timeout=self._timeout,
+                endpoint=self._endpoint
             )
         return self._api
 

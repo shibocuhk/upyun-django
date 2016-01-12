@@ -13,7 +13,8 @@ setup(
     author_email='shibocuhk@gmail.com',
     description='django upyun support',
     install_requires=[
-        'upyun',
+        'requests',
+        'upyun>=2.3.0',
         'ez_setup'
     ],
     tests_require=['Django'],

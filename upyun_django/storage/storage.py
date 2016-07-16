@@ -86,7 +86,10 @@ class UpYunStorage(Storage):
         self._hotlink_token_expire = setting('UPYUN_HOTLINK_TOKEN_EXPIRE', 600)
         self._thumbnail_seperate = setting("UPYUN_THUMBNAIL_SEPERATE", '!')
         self._endpoint = endpoint
-        self._domain = domain or 'b0.upaiyun.com'
+        if domain:
+            self._domain = domain
+        else:
+            self._domain = '%s.%s' % (self._bucket, self._domain)
         self._timeout = timeout
         self._root = root
         self._api = None
@@ -171,13 +174,13 @@ class UpYunStorage(Storage):
             _upt_str = ''
 
         _secret = (self._thumbnail_seperate + self._secret) if self._secret else ''
-        return '%s://%s.%s%s%s%s' % (
-            self._protocol, self._bucket, self._domain, self._save_key(name), _secret, _upt_str)
+        return '%s://%s%s%s%s' % (
+            self._protocol, self._domain, self._save_key(name), _secret, _upt_str)
 
     def thumbnail_url(self, name, version):
         if self._hotlink_token:
             raise Exception('hotlinke token does not support thumbnail')
-        return '%s://%s.%s%s!%s' % (self._protocol, self._bucket, self._domain, self._save_key(name), version)
+        return '%s://%s%s!%s' % (self._protocol, self._domain, self._save_key(name), version)
 
     def save_key(self, name):
         return self._save_key(name)

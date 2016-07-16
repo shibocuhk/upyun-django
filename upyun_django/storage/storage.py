@@ -89,7 +89,7 @@ class UpYunStorage(Storage):
         if domain:
             self._domain = domain
         else:
-            self._domain = '%s.%s' % (self._bucket, domain)
+            self._domain = '%s.%s' % (self._bucket, 'b0.upaiyun.com')
         self._timeout = timeout
         self._root = root
         self._api = None

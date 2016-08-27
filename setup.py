@@ -11,7 +11,6 @@ setup(
     install_requires=[
         'requests',
         'upyun>=2.3.0',
-        'ez_setup'
     ],
     tests_require=['Django'],
     test_suite='tests.main',
